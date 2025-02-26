@@ -1,53 +1,50 @@
-
 import redis
-import time
-from redis.commands.search.query import Query
 from redis.commands.search.field import TextField, NumericField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
-from redis.commands.search.aggregation import AggregateRequest, Asc, Desc
+from redis.commands.search import Client
 
+# Conexión a Redis
+redis_client = redis.Redis(
+    host="redis-19029.c16.us-east-1-3.ec2.redns.redis-cloud.com",
+    port=19029,
+    password="POC_Telcel",
+    decode_responses=True 
+)
 
-def connect_to_redis():
+# Nombre del índice
+INDEX_NAME = "idx_clientes"
+
+# Crear una instancia del cliente de búsqueda
+search_client = Client(INDEX_NAME, conn=redis_client)
+
+def crear_indice():
+    """Crea el índice en Redis Search."""
     try:
-        redis_client = redis.Redis( host="localhost", port=12000, password="test", decode_responses=True)
-        print("Conexión exitosa con Redis")
-        crear_indice(redis_client) 
-        search(redis_client, "net")
-        return redis_client
-    except redis.ConnectionError as e:
-        print(f"Error: No se pudo establecer la conexión con Redis - {e}")
-        return None
+        search_client.drop_index()
+    except Exception:
+        pass  # Si el índice no existe, no hacer nada
+    
+    schema = (
+        TextField("Nombre", weight=5.0),
+        TextField("Perfil"),
+        NumericField("Saldo_estimado"),
+        NumericField("Saldo_facturado")
+    )
+    
+    search_client.create_index(
+        schema,
+        definition=IndexDefinition(prefix=["cliente:"], index_type=IndexType.HASH)
+    )
+    
+    print("Índice creado exitosamente.")
 
-def crear_indice(client):
-    index_name = 'idx:cliente'
-    index = client.ft(index_name)
+def buscar(query):
     try:
-        index.info()
-    except:
-        print("Creando índice...")
-        schema = (NumericField('id', sortable=True), 
-                  TextField('Nombre', weight=1), 
-                  TextField('Perfil', weight=1),
-                  NumericField('Saldo_estimado', sortable=True),
-                  NumericField('Saldo_facturado', sortable=True) )
-        client.ft(index_name).create_index(schema, definition=IndexDefinition(prefix=['cliente:']))
-        print("Índice creado exitosamente.")
-        time.sleep(1)
-
-def search(client, query):
-    index = client.ft("idx:cache")
-    results = index.search(Query("@data:"+ query).paging(offset=0)).docs
-    return results
-
-def tryIndex():    
-    # Connect to Redis
-    redis_client = connect_to_redis() #Conexión con Redis (Función)
-
-    # Perform operations with the connections, if successful
-    if redis_client:
-        time.sleep(1)
-        print("Cerrando conexión con Redis ...")
-        redis_client.close()
-
+        result = search_client.search(query)
+        return result.docs
+    except Exception as e:
+        print(f"Error en la búsqueda: {e}")
+        return []
+    
 if __name__ == "__main__":
-    tryIndex()
+    crear_indice()

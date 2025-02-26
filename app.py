@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 import redis
+import myIndex
 
 # Implementar la función de Flask
 app = Flask(__name__)
@@ -27,6 +28,15 @@ def get_data(key):
         return jsonify({"id ": key, "data ": cached_data})
     else:
         return jsonify({"error": "Data not found"}), 404
+    
+# Endpoint para realizar búsquedas en Redis Search
+@app.route('/buscar/<string:query>', methods=['GET'])
+def get_query(query):
+    if query == "":
+        return jsonify({"error": "Query no proporcionado"}), 400
+    
+    resultados = myIndex.buscar(query)
+    return jsonify(resultados)
 
 # Running the Flask app
 if __name__ == '__main__':

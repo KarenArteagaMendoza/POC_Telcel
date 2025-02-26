@@ -24,9 +24,21 @@ def request_data(key):
     
 
 
+def request_query(query):
+    response = requests.get(f'{BASE_URL}/get_query/{query}')
+
+    if response.status_code == 200:
+        resultados = response.json()
+        print("Resultados de la búsqueda:")
+        for r in resultados:
+            print(r)
+    else:
+        print(f"Error en la solicitud: {response.status_code}, {response.json()}")
 
 if __name__ == "__main__":
     for cliente in range(100):
         print(request_data(cliente))
+    
+    request_query("John")
 
 
