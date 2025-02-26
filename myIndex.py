@@ -1,7 +1,8 @@
 import redis
 from redis.commands.search.field import TextField, NumericField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
-from redis.commands.search import Client
+from redis.commands.search.query import Query
+
 
 # Conexión a Redis
 redis_client = redis.Redis(
@@ -11,33 +12,23 @@ redis_client = redis.Redis(
     decode_responses=True 
 )
 
-# Nombre del índice
-INDEX_NAME = "idx_clientes"
-
-# Crear una instancia del cliente de búsqueda
-search_client = Client(INDEX_NAME, conn=redis_client)
-
-def crear_indice():
-    """Crea el índice en Redis Search."""
+def crear_indice(client):
+    index_name = 'idx:cliente'
+    index = client.ft(index_name)
     try:
-        search_client.drop_index()
-    except Exception:
-        pass  # Si el índice no existe, no hacer nada
-    
-    schema = (
-        TextField("Nombre", weight=5.0),
-        TextField("Perfil"),
-        NumericField("Saldo_estimado"),
-        NumericField("Saldo_facturado")
-    )
-    
-    search_client.create_index(
-        schema,
-        definition=IndexDefinition(prefix=["cliente:"], index_type=IndexType.HASH)
-    )
-    
-    print("Índice creado exitosamente.")
-
+        index.info()
+    except:
+        print("Creando índice...")
+        schema = (
+            TextField("Nombre"),
+            TextField("Perfil"),
+            TextField("Telefono"),
+            NumericField("Saldo_estimado", sortable=True),
+            NumericField("Saldo_facturado", sortable=True)
+        )
+        index.create_index(schema, definition = IndexDefinition(prefix=["cli:"]))
+        print("Índice creado exitosamente.")
+'''
 def buscar(query):
     try:
         result = search_client.search(query)
@@ -45,6 +36,18 @@ def buscar(query):
     except Exception as e:
         print(f"Error en la búsqueda: {e}")
         return []
+'''
+
+def search(client, query):
+    index = client.ft("idx:cliente")
+    try:
+        results = index.search(query)
+        return [doc.__dict__ for doc in results.docs]
+
+    except Exception as e:
+        print(f"Error en la búsqueda: {e}")
+        return []
     
 if __name__ == "__main__":
-    crear_indice()
+    crear_indice(redis_client)
+    print(search(redis_client, "John"))

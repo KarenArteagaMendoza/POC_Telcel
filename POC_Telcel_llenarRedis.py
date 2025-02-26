@@ -17,7 +17,7 @@ def cargar_csv(nombre):
     with open(nombre, 'r', newline='', encoding='utf-8') as archivo_csv:
         archivo = csv.reader(archivo_csv)
         for dato in archivo:
-            redis_client.hset(dato[0], mapping={"Nombre": dato[1],"Perfil": dato[2],"Saldo estimado": dato[3],"Saldo facturado": dato[4]})
+            redis_client.hset(f"cli:{dato[0]}", mapping={"Nombre": dato[1],"Telefono": dato[2], "Perfil": dato[3],"Saldo_estimado": dato[4],"Saldo_facturado": dato[5]})
 
 
 if __name__ == '__main__':
